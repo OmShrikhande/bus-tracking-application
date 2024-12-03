@@ -6,6 +6,7 @@
 const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
+
 export const Colors = {
   light: {
     text: '#11181C',
@@ -23,4 +24,13 @@ export const Colors = {
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
   },
+  PRIMARY: '#07004D',
+  GRAY:'#8f8f8f',
+  SECONDARY:'#A41623',
+  WHITE:'#FFFFFF',
+  BLACK:'#000000',
+  LIGHT:'#EB8A90',
+  Appname:'Bus Tracker',
+  Creator:'Om Shrikhande',
+  BORDER:'#edbc09'
 };
