@@ -6,9 +6,18 @@ import { realtimeDatabase, firestoreDb } from "../../configs/FirebaseConfigs";
 import { Colors } from "../../constants/Colors";
 
 const LocationChecker = () => {
-  const [realtimeLocation, setRealtimeLocation] = useState(null); // Realtime Database location
-  const [firestoreLocation, setFirestoreLocation] = useState(null); // Firestore location
-  const [loading, setLoading] = useState(true);
+  const [realtimeLocation, setRealtimeLocation] = useState(null);
+  const [firestoreLocation, setFirestoreLocation] = useState(null);
+  const [statusMessage, setStatusMessage] = useState("Loading...");
+
+  // Normalize keys to standard format
+  const normalizeKeys = (data) => {
+    if (!data) return null;
+    return {
+      latitude: parseFloat(data.Latitude || data.latitude),
+      longitude: parseFloat(data.Longitude || data.longitude),
+    };
+  };
 
   // Fetch location from Realtime Database
   const fetchRealtimeDatabaseLocation = async () => {
@@ -17,8 +26,7 @@ const LocationChecker = () => {
       const snapshot = await get(databaseReference);
 
       if (snapshot.exists()) {
-        console.log("Realtime Database Location:", snapshot.val());
-        setRealtimeLocation(snapshot.val());
+        setRealtimeLocation(normalizeKeys(snapshot.val()));
       } else {
         console.warn("No data found in Realtime Database at path: bus/Location");
       }
@@ -36,8 +44,7 @@ const LocationChecker = () => {
 
       if (!querySnapshot.empty) {
         querySnapshot.forEach((doc) => {
-          console.log("Firestore Document:", doc.data());
-          setFirestoreLocation(doc.data());
+          setFirestoreLocation(normalizeKeys(doc.data()));
         });
       } else {
         console.warn("No recent location found in Firestore collection: Locations");
@@ -47,47 +54,49 @@ const LocationChecker = () => {
     }
   };
 
-  // Compare locations for equality
-  const compareLocations = () => {
-    if (realtimeLocation && firestoreLocation) {
-      const realtimeString = JSON.stringify(realtimeLocation); // Convert Realtime DB location to string
-      const firestoreString = JSON.stringify(firestoreLocation); // Convert Firestore location to string
+  // Compare locations and update status
+  const compareLocations = (rtLocation, fsLocation) => {
+    if (rtLocation && fsLocation) {
+      const isMatch =
+        rtLocation.latitude === fsLocation.latitude &&
+        rtLocation.longitude === fsLocation.longitude;
 
-      // Debugging
-      console.log("Realtime Location:", realtimeString);
-      console.log("Firestore Location:", firestoreString);
-
-      if (realtimeString === firestoreString) {
-        return <Text style={styles.successText}>✅ Successful: Locations match!</Text>;
-      } else {
-        return <Text style={styles.errorText}>❌ Mismatch: Locations do not match.</Text>;
-      }
+      setStatusMessage(isMatch ? "✅ Locations match." : "❌ Locations mismatch.");
+    } else {
+      setStatusMessage("❓ Locations not available for comparison.");
     }
-    return <Text style={styles.text}>Loading location data...</Text>;
   };
 
-  // Fetch data and set up periodic refresh
+  // Fetch data and compare periodically
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
       await fetchRealtimeDatabaseLocation();
       await fetchFirestoreLocation();
-      setLoading(false);
     };
 
-    // Initial fetch
+    // Fetch initially
     fetchData();
 
-    // Set up periodic refresh every 15 seconds
-    const interval = setInterval(fetchData, 10000);
+    // Set up periodic refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchData();
+      console.log("updated")
+    }, 10000);
 
     // Cleanup on component unmount
     return () => clearInterval(interval);
   }, []);
 
+  // Compare when both locations are updated
+  useEffect(() => {
+    if (realtimeLocation && firestoreLocation) {
+      compareLocations(realtimeLocation, firestoreLocation);
+    }
+  }, [realtimeLocation, firestoreLocation]);
+
   return (
     <View style={styles.container}>
-      {loading ? <Text style={styles.text}>Fetching data...</Text> : compareLocations()}
+      <Text style={styles.text}>{statusMessage}</Text>
     </View>
   );
 };
@@ -108,18 +117,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     color: Colors.BORDER,
-    textAlign: "center",
-  },
-  successText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "green",
-    textAlign: "center",
-  },
-  errorText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "red",
     textAlign: "center",
   },
 });
