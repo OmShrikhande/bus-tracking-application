@@ -52,7 +52,7 @@ export default function Maps() {
     };
 
     // Fetch live location every 30 seconds
-    const interval = setInterval(fetchLiveLocation, 15000);
+    const interval = setInterval(fetchLiveLocation, 15000000);
 
     // Cleanup interval and Firebase subscription on component unmount
     return () => clearInterval(interval);
