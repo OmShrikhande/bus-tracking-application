@@ -13,8 +13,8 @@ export default function Maps() {
   });
 
   const [endPosition] = useState({
-    latitude: 21.213006148731203, // End latitude
-    longitude: 78.97323421139544, // End longitude
+    latitude: 21.213652341474052, // End latitude
+    longitude: 78.97403582212675, // End longitude
   });
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function Maps() {
                 latitudeDelta: 0.001,
                 longitudeDelta: 0.001,
               },
-              1000 // Animation duration
+              100 // Animation duration
             );
           }
         } else {
@@ -52,7 +52,7 @@ export default function Maps() {
     };
 
     // Fetch live location every 30 seconds
-    const interval = setInterval(fetchLiveLocation, 15000000);
+    const interval = setInterval(fetchLiveLocation, 5000);
 
     // Cleanup interval and Firebase subscription on component unmount
     return () => clearInterval(interval);
@@ -77,7 +77,7 @@ export default function Maps() {
           description="This is the live location of the bus"
         >
           <Image
-            source={require("../../assets/images/images.jpeg")} // Path to your bus icon
+            source={require("./../../assets/images/images.jpeg")} // Path to your bus icon
             style={{ width: 40, height: 40 }}
             resizeMode="contain"
           />

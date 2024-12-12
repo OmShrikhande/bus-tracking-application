@@ -1,10 +1,28 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
+import MenuList from '../../components/Profile/MenuList'
+
 export default function profile() {
   return (
-    <View>
-      <Text>profile</Text>
+    <View style={{
+      padding:20,
+    }}>
+      <Text style={{
+        fontFamily:'flux-bold',
+        fontSize:35,            
+       
+      }}>Profile</Text>
+
+
+      {/* UsserIntro */}
+
+      {/* <UserIntro/> */}
+
+      {/* userList */}
+
+      <MenuList/>
+
     </View>
   )
 }

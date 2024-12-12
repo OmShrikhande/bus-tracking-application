@@ -4,6 +4,7 @@ import { Redirect, useNavigation } from "expo-router";
 // Import LinearGradient for the background
 import { Colors } from '@/constants/Colors';
 
+
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const navigation = useNavigation(); // Typed navigation
@@ -17,7 +18,7 @@ export default function Index() {
     // Set a timeout for 1 second before redirecting
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000); // Delay of 1 second (1000ms)
+    }, 2000); // Delay of 1 second (1000ms)
 
     // Clean up the timer
     return () => clearTimeout(timer);
@@ -35,7 +36,7 @@ export default function Index() {
     >
       {/* Replace this with your own cool graphic, logo, or animation */}
       <Image
-        source={require('../assets/images/image.png')} // Make sure to replace with your logo path
+        source={require('../assets/images/bustrackerlogo.png')} // Make sure to replace with your logo path
         style={styles.logo}
       />
       <Text style={styles.appName}>{Colors.Appname}</Text>
