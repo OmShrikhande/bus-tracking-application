@@ -13,21 +13,29 @@ const LocationChecker = () => {
   const [previousLocation, setPreviousLocation] = useState(null); // State to store the previous location
   const [currentStopName, setCurrentStopName] = useState(null); // State to store the current stop name
 
+  // Function to normalize latitude and longitude to 6 decimals
   const normalizeKeys = (data) => {
-
-    
     if (!data) return null;
-    
-    return {  
-      latitude: parseFloat(data.Latitude || data.latitude),
-      longitude: parseFloat(data.Longitude || data.longitude),
+
+    const roundToSix = (value) => {
+      if (typeof value === 'number') {
+        return parseFloat(value.toFixed(6)); // Round to 6 decimals
+      }
+      return 0.0;
+    };
+
+    return {
+      latitude: roundToSix(parseFloat(data.Latitude || data.latitude || 0)),
+      longitude: roundToSix(parseFloat(data.Longitude || data.longitude || 0)),
     };
   };
 
-  const isCloseEnough = (val1, val2, threshold = 0.0001) => {
-    return Math.abs(val1 - val2) <= threshold;
+  // Function to check if two values are close enough
+  const isCloseEnough = (val1, val2) => {
+    return val1 === val2; // Exact comparison since both are rounded to 6 decimals
   };
 
+  // Get current IST time in ISO format
   const getCurrentIST = () => {
     const now = new Date();
     const utcOffset = now.getTimezoneOffset() * 60000;
@@ -35,6 +43,7 @@ const LocationChecker = () => {
     return new Date(now.getTime() + istOffset - utcOffset).toISOString();
   };
 
+  // Fetch the location from Firebase Realtime Database
   const fetchRealtimeDatabaseLocation = async () => {
     try {
       const databaseReference = ref(realtimeDatabase, "bus/Location");
@@ -50,34 +59,34 @@ const LocationChecker = () => {
     }
   };
 
+  // Fetch the Firestore location
   const fetchFirestoreLocation = async () => {
     try {
-      const locationsCollection = collection(firestoreDb, "Locations");
-      const locationsQuery = query(locationsCollection, orderBy("timestamp", "desc"));
+      const locationsCollection = collection(firestoreDb, "Location");
+      const locationsQuery = query(locationsCollection, orderBy("timestamp", "asc"));
       const querySnapshot = await getDocs(locationsQuery);
 
       if (!querySnapshot.empty) {
         const locations = [];
         querySnapshot.forEach((doc) => {
           locations.push({ id: doc.id, data: doc.data() });
-          
         });
 
         if (locations.length > 0) {
           const currentLocation = locations[0]; // First document
           const nextLocation = locations[1] || null; // Next document if available
-          const prevLocation = locations[2] || null; // The third document (previous location)
-        
+          const prevLocation = locations[2] || null; // Third document (previous location)
+
           setFirestoreLocation(normalizeKeys(currentLocation.data));
           setNextFirestoreDoc(nextLocation ? nextLocation.id : null);
-          setPreviousLocation(prevLocation ? { id: prevLocation.id, ...normalizeKeys(prevLocation.data) } : null); // Set the previous location
-        
+          setPreviousLocation(prevLocation ? { id: prevLocation.id, ...normalizeKeys(prevLocation.data) } : null);
+
           // Assuming the current stop's name is stored as "stopName" or "name" in the document
-          setCurrentStopName(currentLocation.data.stopName || currentLocation.data.name || "Unnamed Stop"); // Set current stop name
-        
+          setCurrentStopName(currentLocation.data.stopName || currentLocation.data.name || "Unnamed Stop");
+
           compareLocations(currentLocation.id);
+          
         }
-        
       } else {
         console.warn("No recent location found in Firestore collection: Locations");
       }
@@ -86,9 +95,10 @@ const LocationChecker = () => {
     }
   };
 
+  // Update the Firestore timestamp
   const updateTimestamp = async (docId) => {
     try {
-      const docRef = doc(firestoreDb, "Locations", docId);
+      const docRef = doc(firestoreDb, "Location", docId);
       await updateDoc(docRef, { timestamp: getCurrentIST() });
       console.log(`Updated timestamp for document: ${docId}`);
     } catch (error) {
@@ -96,20 +106,25 @@ const LocationChecker = () => {
     }
   };
 
-  
+  // Compare the fetched locations
   const compareLocations = (firestoreDocId) => {
     if (realtimeLocation && firestoreLocation) {
+      // Ensure both locations are compared with 6-decimal precision
+      const roundedRealtimeLat = parseFloat(realtimeLocation.latitude.toFixed(6));
+      const roundedRealtimeLon = parseFloat(realtimeLocation.longitude.toFixed(6));
+      const roundedFirestoreLat = parseFloat(firestoreLocation.latitude.toFixed(6));
+      const roundedFirestoreLon = parseFloat(firestoreLocation.longitude.toFixed(6));
+
       const isMatch =
-        isCloseEnough(realtimeLocation.latitude, firestoreLocation.latitude) &&
-        isCloseEnough(realtimeLocation.longitude, firestoreLocation.longitude);
+        isCloseEnough(roundedRealtimeLat, roundedFirestoreLat) &&
+        isCloseEnough(roundedRealtimeLon, roundedFirestoreLon);
 
       if (isMatch) {
         setStatusMessage(null);
-        updateTimestamp(firestoreDocId); // Update timestamp for the matched document
+        updateTimestamp(firestoreDocId);
       } else {
         if (previousLocation) {
           setStatusMessage(`${previousLocation.id}`);
-
         } else {
           setStatusMessage("❌ Locations mismatch, no recent stop available.");
         }

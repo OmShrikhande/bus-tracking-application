@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import MapView, { Marker } from "react-native-maps";
-import { StyleSheet, View, Image } from "react-native";
+import { StyleSheet, View, Image, Text } from "react-native";
 import { ref, onValue } from "firebase/database";
 import { realtimeDatabase } from "../../configs/FirebaseConfigs"; // Import your Firebase Realtime Database config
 import { Colors } from "../../constants/Colors";
@@ -11,6 +11,8 @@ export default function Maps() {
     latitude: 21.116357833, // Start latitude
     longitude: 79.052105833, // Start longitude
   });
+
+  const [speed, setSpeed] = useState("--"); // Speed state
 
   const [endPosition] = useState({
     latitude: 21.213652341474052, // End latitude
@@ -24,21 +26,24 @@ export default function Maps() {
       // Subscribe to live location updates from Firebase
       onValue(locationRef, (snapshot) => {
         if (snapshot.exists()) {
-          const { Latitude, longitude } = snapshot.val();
-          console.log("Fetched Live Location:", { Latitude, longitude });
+          const { Latitude, Longitude, speed: fetchedSpeed } = snapshot.val();
+          console.log("Fetched Live Location:", { Latitude, Longitude, fetchedSpeed });
 
           // Update marker position to fetched location
           setMarkerPosition({
             latitude: Latitude,
-            longitude: longitude,
+            longitude: Longitude,
           });
+
+          // Update speed, fallback to "--" if speed is not available or zero
+          setSpeed(fetchedSpeed && fetchedSpeed > 0 ? fetchedSpeed.toString() : "--");
 
           // Animate the map to the new position
           if (mapRef.current) {
             mapRef.current.animateToRegion(
               {
                 latitude: Latitude,
-                longitude: longitude,
+                longitude: Longitude,
                 latitudeDelta: 0.001,
                 longitudeDelta: 0.001,
               },
@@ -47,6 +52,7 @@ export default function Maps() {
           }
         } else {
           console.warn("No location data found in Realtime Database.");
+          setSpeed("--"); // Set speed to "--" if no data is found
         }
       });
     };
@@ -77,7 +83,7 @@ export default function Maps() {
           description="This is the live location of the bus"
         >
           <Image
-            source={require("./../../assets/images/images.jpeg")} // Path to your bus icon
+            source={require("./../../assets/images/images.jpeg")}
             style={{ width: 40, height: 40 }}
             resizeMode="contain"
           />
@@ -90,6 +96,12 @@ export default function Maps() {
           description="End Location"
         />
       </MapView>
+
+      {/* Speed Display */}
+      <View style={styles.speedContainer}>
+        <Text style={styles.speedText}>{speed}</Text>
+        <Text style={styles.speedLabel}>km/h</Text>
+      </View>
     </View>
   );
 }
@@ -104,6 +116,27 @@ const styles = StyleSheet.create({
   },
   map: {
     width: "100%",
-    height: 400,
+    height: 420,
+  },
+  speedContainer: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: Colors.SECONDARY,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  speedText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: Colors.WHITE,
+  },
+  speedLabel: {
+    fontSize: 12,
+    color: Colors.WHITE,
   },
 });
