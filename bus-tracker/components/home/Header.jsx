@@ -2,7 +2,6 @@ import { Text, StyleSheet, View,Image, TextInput } from 'react-native'
 import React, { Component } from 'react'
 import { useUser } from '@clerk/clerk-expo'
 import {Colors} from '../../constants/Colors'
-import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function Header(){
 
