@@ -33,11 +33,10 @@ const VerticalStopsComponent = () => {
       const fetchedStops = querySnapshot.docs.map((doc) => ({
         ...normalizeKeys(doc.data()),
         documentName: doc.id,
-        reached: false, // Default status
-        notified: false, // New flag to track if notification is triggered
+        reached: false,
+        lastNotified: null, // Timestamp of last notification
       }));
 
-      // Sort stops by serial number or alphabetically
       const sortedStops = fetchedStops.sort((a, b) => {
         const srA = parseInt(a.serialNumber, 10) || Infinity;
         const srB = parseInt(b.serialNumber, 10) || Infinity;
@@ -62,32 +61,33 @@ const VerticalStopsComponent = () => {
         const location = normalizeKeys(snapshot.val());
         setCurrentLocation(location);
 
+        const now = Date.now();
+
         setStops((prevStops) =>
-          prevStops.map((stop) => ({
-            ...stop,
-            reached: isInRange(location, stop),
-          }))
+          prevStops.map((stop) => {
+            const reached = isInRange(location, stop);
+            const shouldNotify =
+              reached &&
+              (!stop.lastNotified || now - stop.lastNotified >= 10 * 60 * 1000);
+
+            if (shouldNotify) {
+              Alert.alert("\u2705 The bus has reached:", stop.documentName);
+
+              return {
+                ...stop,
+                reached: true,
+                lastNotified: now,
+              };
+            }
+
+            return { ...stop, reached };
+          })
         );
-
-        const matchedStop = stops.find((stop) => isInRange(location, stop) && !stop.notified);
-
-        if (matchedStop) {
-          Alert.alert("\u2705 The bus has reached:", matchedStop.documentName);
-
-          // Mark this stop as notified
-          setStops((prevStops) =>
-            prevStops.map((stop) =>
-              stop.documentName === matchedStop.documentName
-                ? { ...stop, notified: true }
-                : stop
-            )
-          );
-        }
       }
     });
 
     return () => unsubscribe();
-  }, [stops]);
+  }, []);
 
   if (loading) {
     return (
@@ -101,13 +101,10 @@ const VerticalStopsComponent = () => {
     <ScrollView contentContainerStyle={styles.container}>
       {stops.map((stop, index) => (
         <View key={stop.documentName} style={styles.stopWrapper}>
-          {/* Line connecting stops */}
           {index > 0 && <View style={styles.line} />}
-          {/* Stop Point */}
           <View
             style={[styles.stopPoint, stop.reached ? styles.reached : styles.notReached]}
           />
-          {/* Stop Name */}
           <Text style={styles.stopText}>
             {stop.documentName} {stop.reached ? "(reached)" : "(not reached)"}
           </Text>
@@ -144,10 +141,10 @@ const styles = StyleSheet.create({
     borderColor: Colors.BORDER,
   },
   reached: {
-    backgroundColor: Colors.SUCCESS, // Green for reached
+    backgroundColor: Colors.SUCCESS,
   },
   notReached: {
-    backgroundColor: Colors.PRIMARY, // Blue for not reached
+    backgroundColor: Colors.PRIMARY,
   },
   stopText: {
     marginTop: 10,
@@ -163,6 +160,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     color: Colors.GREY,
+    
   },
 });
 
