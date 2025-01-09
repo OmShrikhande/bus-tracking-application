@@ -9,6 +9,7 @@ const LocationChecker = () => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [statusMessage, setStatusMessage] = useState("Fetching location data...");
   const [firestoreLocations, setFirestoreLocations] = useState([]);
+  const [reachedLocationTime, setReachedLocationTime] = useState(null);
 
   const normalizeKeys = (data) => {
     if (!data) return null;
@@ -60,7 +61,17 @@ const LocationChecker = () => {
         });
 
         if (matchedLocation) {
-          setStatusMessage(`\u2705 The bus has reached: ${matchedLocation} at `);
+          if (!reachedLocationTime) {
+            const currentTime = new Date();
+            const istTime = new Date(currentTime.getTime());
+            const formattedTime = istTime.toLocaleTimeString("en-IN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            });
+            setReachedLocationTime(formattedTime);
+            setStatusMessage(`\u2705 The bus has reached: ${matchedLocation} at ${formattedTime}`);
+          }
         } else {
           setStatusMessage("Realtime location does not match any known location.");
         }
@@ -70,7 +81,7 @@ const LocationChecker = () => {
     });
 
     return () => unsubscribe();
-  }, [firestoreLocations]);
+  }, [firestoreLocations, reachedLocationTime]);
 
   return (
     <View style={styles.container}>

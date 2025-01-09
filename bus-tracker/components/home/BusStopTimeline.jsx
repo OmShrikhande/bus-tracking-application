@@ -35,6 +35,7 @@ const VerticalStopsComponent = () => {
         documentName: doc.id,
         reached: false,
         lastNotified: null, // Timestamp of last notification
+        reachedTime: null, // Time when the stop was reached
       }));
 
       const sortedStops = fetchedStops.sort((a, b) => {
@@ -71,16 +72,39 @@ const VerticalStopsComponent = () => {
               (!stop.lastNotified || now - stop.lastNotified >= 10 * 60 * 1000);
 
             if (shouldNotify) {
-              Alert.alert("\u2705 The bus has reached:", stop.documentName);
+              const currentTime = new Date();
+              const istTime = new Date(currentTime.getTime());
+              const formattedTime = istTime.toLocaleTimeString("en-IN", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              });
+
+              Alert.alert("\u2705 The bus has reached:", `${stop.documentName} at ${formattedTime}`);
+
+              // Reset times if the stop is "College"
+              if (stop.documentName === "College") {
+                return {
+                  ...stop,
+                  reached: true,
+                  lastNotified: now,
+                  reachedTime: formattedTime,
+                };
+              }
 
               return {
                 ...stop,
                 reached: true,
                 lastNotified: now,
+                reachedTime: formattedTime,
               };
             }
 
-            return { ...stop, reached };
+            return {
+              ...stop,
+              reached,
+              reachedTime: reached ? stop.reachedTime : null,
+            };
           })
         );
       }
@@ -106,7 +130,7 @@ const VerticalStopsComponent = () => {
             style={[styles.stopPoint, stop.reached ? styles.reached : styles.notReached]}
           />
           <Text style={styles.stopText}>
-            {stop.documentName} {stop.reached ? "(reached)" : "(not reached)"}
+            {stop.documentName} {stop.reached ? `(reached at ${stop.reachedTime})` : "(not reached)"}
           </Text>
         </View>
       ))}
@@ -160,7 +184,6 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 18,
     color: Colors.GREY,
-    
   },
 });
 

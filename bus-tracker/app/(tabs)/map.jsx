@@ -25,7 +25,7 @@ export default function Explore() {
       tension: 40,
       useNativeDriver: true,
     }).start(() => {
-      Linking.openURL("https://www.google.com");
+      Linking.openURL("http://sbjainbuses.liveblog365.com/");
     });
   };
 
@@ -38,7 +38,7 @@ export default function Explore() {
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
         >
-          <Text style={styles.buttonText}>Go to Google</Text>
+          <Text style={styles.buttonText}>Track your bus</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>
