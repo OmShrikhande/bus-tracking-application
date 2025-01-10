@@ -40,7 +40,7 @@ const onMenuClick=(item)=>{
             Share.share(
                 
                 {message:
-                    '🚀 share bus tracking app with friends \n\n\n 🌐Check out this amazing app Ceated By om Shrikahnde that lets you manage and control all your IoT devices in one place! With just a tap, you can trigger and access the IPs of your connected devices remotely, no matter where you are.\n✅ Monitor device status\n✅ Trigger actions by accessing device IPs\n✅ View all device details like name, location, and category\n✅ Simple, fast, and secure!\n\n\n\nDownload now and take full control of your smart devices. 🌍💡🔧'
+                    'The S.B. Jain Bus Tracker App is a smart solution developed by Om Shrikhande 🎓, a 3rd-year CSE student, and Kuldeep Tiwari 🛠️, the IoT developer, to streamline institute transportation. With 🚌 Real-Time Bus Tracking, 📅 ETA updates, and 🗺️ Interactive Maps, the app ensures students and staff can track buses easily and plan commutes effectively. Its 🤝 User-Friendly Interface offers a seamless experience, making it a valuable tool for the S.B. Jain community. 🚀 If you are interested in Development contact us on linked in.'
 
                 })
             return;
@@ -100,7 +100,7 @@ const onMenuClick=(item)=>{
                 fontSize:18,
                 fontFamily:'flux-bold',
                 color:Colors.PRIMARY,
-                marginVertical:80,
+                marginVertical:300,
                 textAlign:'center'
             }}
         >
