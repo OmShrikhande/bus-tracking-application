@@ -43,11 +43,11 @@ WebBrowser.maybeCompleteAuthSession()
 
         <View style={[styles.subContainer, { padding: width * 0.08 }]}>
           <Text style={styles.title}>
-            Your Ultimate <Text style={{ color: Colors.PRIMARY }}>IoT Controller</Text> App
+            Your Ultimate <Text style={{ color: Colors.PRIMARY }}>S.B. Jain's Bus Tracker</Text> App
           </Text>
 
           <Text style={styles.description}>
-            Let you become the Controller of your environment single-handedly
+            Let you get the realtime location of your bus using this application
           </Text>
 
           <TouchableOpacity style={styles.btn} onPress={onPress}>
