@@ -186,5 +186,4 @@ const styles = StyleSheet.create({
     color: Colors.GREY,
   },
 });
-
 export default VerticalStopsComponent;
