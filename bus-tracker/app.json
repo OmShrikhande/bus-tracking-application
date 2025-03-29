@@ -33,6 +33,15 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/bustrackerlogo.png",
+          "color": "#ffffff",
+          "androidMode": "default",
+          "androidCollapsedTitle": "New Notification"
+        }
       ]
     ],
     "experiments": {

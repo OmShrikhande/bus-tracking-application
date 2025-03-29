@@ -1,29 +1,42 @@
-import { View, Text, ScrollView, StyleSheet } from 'react-native'
-import React from 'react'
+import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native'
+import React, { useState } from 'react'
 import Header from '../../components/home/Header'
 import Display from '../../components/home/Display'
 import BusStopTimeline from '../../components/home/BusStopTimeline'
-
+import SpeedMonitor from '../../components/home/SpeedMonitor'
 
 export default function Home() {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    // Simulate a network request or data refresh
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 2000);
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
+      <ScrollView
+        contentContainerStyle={styles.scrollViewContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <Header />
 
         {/* to display the recent location */}
-        <Display />
-
-        
+        {<SpeedMonitor />}
       </ScrollView>
       <ScrollView>
         <View style={styles.buscontainer}>
           <BusStopTimeline />
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({

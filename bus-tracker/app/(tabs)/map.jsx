@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,32 @@ import {
   Animated,
   Linking,
 } from "react-native";
+import { firestoreDb } from "../../configs/FirebaseConfigs"; // Import Firestore
+import { doc, getDoc } from "firebase/firestore"; // Firestore methods
+import { useNavigation } from "@react-navigation/native"; // Import navigation hook
 
 export default function Explore() {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const [url, setUrl] = useState(null);
+  const navigation = useNavigation(); // Initialize navigation
+
+  useEffect(() => {
+    const fetchUrl = async () => {
+      try {
+        const docRef = doc(firestoreDb, "Mapdisplay", "website link"); // Firestore path
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setUrl(docSnap.data().urltoweb); // Fetch the URL
+          console.log(docSnap.data().urltoweb);
+        } else {
+          console.error("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching URL:", error);
+      }
+    };
+    fetchUrl();
+  }, []);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -25,7 +48,11 @@ export default function Explore() {
       tension: 40,
       useNativeDriver: true,
     }).start(() => {
-      Linking.openURL("http://sbjainbuses.liveblog365.com/");
+      if (url) {
+        Linking.openURL(url); // Use the dynamic URL
+      } else {
+        console.error("URL not available");
+      }
     });
   };
 

@@ -1,15 +1,88 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Alert, Platform } from "react-native";
 import { ref, onValue } from "firebase/database";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc } from "firebase/firestore"; // Import Firestore methods
 import { realtimeDatabase, firestoreDb } from "../../configs/FirebaseConfigs";
 import { Colors } from "../../constants/Colors";
+import { MaterialIcons } from "@expo/vector-icons";
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import * as Linking from "expo-linking";
+
+// Configure notification behavior when received
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,  // Ensures sound plays
+    shouldSetBadge: true,
+  }),
+});
+
+// ✅ Request Notification Permissions
+const requestPermissions = async () => {
+  if (!Device.isDevice) {
+    console.warn("Must use a real device for notifications!");
+    return false;
+  }
+
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+
+  if (existingStatus !== "granted") {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+
+  if (finalStatus !== "granted") {
+    Alert.alert(
+      "Notification Permission",
+      "Enable notifications in settings to receive bus arrival alerts.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Open Settings", onPress: () => Linking.openSettings() },
+      ]
+    );
+    return false;
+  }
+
+  console.log("✅ Notification permissions granted.");
+
+  // Get and log the push token
+  const { data: pushToken } = await Notifications.getExpoPushTokenAsync();
+  console.log("Expo Push Token:", pushToken);
+
+  return true;
+};
+
+// ✅ Send Notification
+const sendNotification = async (title, body) => {
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      sound: "default", // Ensure sound plays
+    },
+    trigger: null, // Send immediately
+  });
+};
 
 const VerticalStopsComponent = () => {
   const [stops, setStops] = useState([]);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const setupNotifications = async () => {
+      const hasPermission = await requestPermissions();
+      if (hasPermission) {
+        sendNotification("Test Notification", "This is a test notification.");
+      }
+    };
+
+    setupNotifications();
+  }, []);
+
+  // ✅ Normalize GPS data keys
   const normalizeKeys = (data) => {
     if (!data) return null;
     return {
@@ -18,13 +91,15 @@ const VerticalStopsComponent = () => {
     };
   };
 
-  const isInRange = (rtLocation, fsLocation, range = 0.01) => {
+  // ✅ Check if the bus is within range
+  const isInRange = (rtLocation, fsLocation, range = 0.001) => {
     if (!rtLocation || !fsLocation) return false;
     const latDiff = Math.abs(rtLocation.latitude - fsLocation.latitude);
     const lngDiff = Math.abs(rtLocation.longitude - fsLocation.longitude);
     return latDiff <= range && lngDiff <= range;
   };
 
+  // ✅ Fetch bus stops from Firestore
   const fetchFirestoreLocations = async () => {
     try {
       const locationsCollection = collection(firestoreDb, "Locations");
@@ -33,22 +108,23 @@ const VerticalStopsComponent = () => {
       const fetchedStops = querySnapshot.docs.map((doc) => ({
         ...normalizeKeys(doc.data()),
         documentName: doc.id,
+        serialNumber: doc.data().serialNumber,
         reached: false,
-        lastNotified: null, // Timestamp of last notification
-        reachedTime: null, // Time when the stop was reached
+        lastNotified: null,
+        reachedTime: null,
       }));
 
+      // Sort stops based on serialNumber
       const sortedStops = fetchedStops.sort((a, b) => {
         const srA = parseInt(a.serialNumber, 10) || Infinity;
         const srB = parseInt(b.serialNumber, 10) || Infinity;
-        if (srA !== srB) return srA - srB;
-        return a.documentName.localeCompare(b.documentName);
+        return srA - srB;
       });
 
       setStops(sortedStops);
       setLoading(false);
     } catch (error) {
-      console.error("Error fetching Firestore data:", error);
+      console.error("❌ Error fetching Firestore data:", error);
     }
   };
 
@@ -73,24 +149,20 @@ const VerticalStopsComponent = () => {
 
             if (shouldNotify) {
               const currentTime = new Date();
-              const istTime = new Date(currentTime.getTime());
-              const formattedTime = istTime.toLocaleTimeString("en-IN", {
+              const formattedTime = currentTime.toLocaleTimeString("en-IN", {
                 hour: "2-digit",
                 minute: "2-digit",
                 second: "2-digit",
               });
 
-              Alert.alert("\u2705 The bus has reached:", `${stop.documentName} at ${formattedTime}`);
+              // Update the time field in Firestore
+              const stopDocRef = doc(firestoreDb, "Locations", stop.documentName);
+              updateDoc(stopDocRef, { time: formattedTime }).catch((error) =>
+                console.error("❌ Error updating Firestore:", error)
+              );
 
-              // Reset times if the stop is "College"
-              if (stop.documentName === "College") {
-                return {
-                  ...stop,
-                  reached: true,
-                  lastNotified: now,
-                  reachedTime: formattedTime,
-                };
-              }
+              Alert.alert("✅ The bus has reached:", `${stop.documentName} at ${formattedTime}`);
+              sendNotification("Bus Arrival", `The bus has reached ${stop.documentName} at ${formattedTime}`);
 
               return {
                 ...stop,
@@ -123,67 +195,144 @@ const VerticalStopsComponent = () => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      {stops.map((stop, index) => (
-        <View key={stop.documentName} style={styles.stopWrapper}>
-          {index > 0 && <View style={styles.line} />}
-          <View
-            style={[styles.stopPoint, stop.reached ? styles.reached : styles.notReached]}
-          />
-          <Text style={styles.stopText}>
-            {stop.documentName} {stop.reached ? `(reached at ${stop.reachedTime})` : "(not reached)"}
-          </Text>
-        </View>
-      ))}
+      <View style={styles.timeline}>
+        {stops.map((stop, index) => {
+          // Determine the stop's text color
+          let textStyle = styles.textNotReached;
+          if (stop.reached) {
+            textStyle = styles.textReached; // Green for reached stop
+          } else if (index > 0 && stops[index - 1].reached) {
+            textStyle = styles.textNext; // Yellow for the next stop
+          } else if (index < stops.findIndex((s) => s.reached)) {
+            textStyle = styles.textPrevious; // Grey for previous stops
+          }
+
+          return (
+            <View key={stop.documentName} style={styles.stopContainer}>
+              {/* Odd stops on the left */}
+              {index % 2 === 0 && (
+                <View style={styles.stopDetailsLeft}>
+                  <Text style={[styles.stopText, textStyle]} numberOfLines={2} ellipsizeMode="tail">
+                    {stop.documentName}
+                    {stop.reached ? `\n(reached at ${stop.reachedTime})` : "\n(not reached)"}
+                  </Text>
+                </View>
+              )}
+
+              {/* Central line with dot */}
+              <View style={styles.centralLine}>
+                <View style={styles.verticalLine} />
+                <View style={styles.dot} />
+                {stop.reached && (
+                  <Text style={styles.timeText}>{stop.reachedTime}</Text>
+                )}
+              </View>
+
+              {/* Even stops on the right */}
+              {index % 2 !== 0 && (
+                <View style={styles.stopDetailsRight}>
+                  <Text style={[styles.stopText, textStyle]} numberOfLines={2} ellipsizeMode="tail">
+                    {stop.documentName}
+                    {stop.reached ? `\n(reached at ${stop.reachedTime})` : "\n(not reached)"}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: "center",
     paddingVertical: 20,
     backgroundColor: Colors.WHITE,
   },
-  stopWrapper: {
+  timeline: {
+    flexDirection: "column",
     alignItems: "center",
-    marginBottom: 20,
     position: "relative",
   },
-  line: {
+  stopContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginVertical: 20,
+    width: "100%",
+  },
+  stopDetailsLeft: {
+    flex: 1,
+    alignItems: "flex-end",
+    paddingRight: 10,
+  },
+  stopDetailsRight: {
+    flex: 1,
+    alignItems: "flex-start",
+    paddingLeft: 10,
+  },
+  centralLine: {
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  verticalLine: {
     position: "absolute",
     width: 2,
-    height: 50,
-    backgroundColor: Colors.GREY,
-    top: -50,
+    height: "100%",
+    backgroundColor: Colors.GREY, // Line color
     zIndex: -1,
   },
-  stopPoint: {
+  dot: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.BORDER,
+    marginBottom: 5,
+    zIndex: 1,
   },
-  reached: {
-    backgroundColor: Colors.SUCCESS,
+  dotReached: {
+    backgroundColor: Colors.SUCCESS, // Green for reached stop
   },
-  notReached: {
-    backgroundColor: Colors.PRIMARY,
+  dotNotReached: {
+    backgroundColor: Colors.GREY, // Default grey for not reached stops
+  },
+  dotNext: {
+    backgroundColor: Colors.WARNING, // Yellow for the next stop
+  },
+  dotPrevious: {
+    backgroundColor: Colors.LIGHT_GREY, // Grey for stops behind the reached stop
+  },
+  timeText: {
+    fontSize: 12,
+    color: Colors.DARK,
+    marginTop: 5,
   },
   stopText: {
-    marginTop: 10,
     fontSize: 16,
     color: Colors.DARK,
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: Colors.WHITE,
   },
   loadingText: {
     fontSize: 18,
     color: Colors.GREY,
   },
+  textReached: {
+    color: Colors.SUCCESS, // Green for reached stop
+  },
+  textNotReached: {
+    color: Colors.DARK, // Default color for not reached stops
+  },
+  textNext: {
+    color: Colors.WARNING, // Yellow for the next stop
+  },
+  textPrevious: {
+    color: Colors.LIGHT_GREY, // Grey for stops behind the reached stop
+  },
 });
+
 export default VerticalStopsComponent;

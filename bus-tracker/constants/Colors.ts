@@ -32,5 +32,10 @@ export const Colors = {
   LIGHT:'#EB8A90',
   Appname:'Bus Tracker',
   Creator:'Om Shrikhande',
-  BORDER:'#edbc09'
+  BORDER:'#edbc09',
+  SUCCESS: '#28a745', // Green for reached stop
+  WARNING: '#ffc107', // Yellow for the next stop
+  LIGHT_GREY: '#d3d3d3', // Grey for stops behind the reached stop
+  DARK: '#343a40', // Default dark color for text
+  GREY: '#6c757d', // Grey for not reached stops and line
 };
